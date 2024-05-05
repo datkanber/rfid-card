@@ -6,24 +6,23 @@ import pygame
 VENDOR_ID = 0xffff
 PRODUCT_ID = 0x0035
 CONFIRM_SOUND_FILE = 'confirm.wav'
-USER_CARDS = {
-    '00001e': 'Burak Kanber',  # Adjust these to actual expected hex values from reader
-    '000021': 'Anonymous User'
-}
+REJECT_SOUND_FILE = 'reject.wav'
+AUTHORIZED_CARD = '00001e00'  # Bu kart numarası onaylanacak
 DEBOUNCE_TIME = 3  # seconds
 
 def init_sound_system():
     pygame.mixer.init()
-    return pygame.mixer.Sound(CONFIRM_SOUND_FILE)
+    sounds = {
+        'confirm': pygame.mixer.Sound(CONFIRM_SOUND_FILE),
+        'reject': pygame.mixer.Sound(REJECT_SOUND_FILE)
+    }
+    return sounds
 
-def play_confirmation_sound(sound):
-    sound.play()
-
-def get_user_from_card(card_number):
-    return USER_CARDS.get(card_number, 'Unknown User')  # Ensure case-insensitive matching
+def play_sound(sounds, sound_key):
+    sounds[sound_key].play()
 
 def main():
-    sound = init_sound_system()
+    sounds = init_sound_system()
     device = hid.device()
     device.open(VENDOR_ID, PRODUCT_ID)
 
@@ -39,24 +38,26 @@ def main():
         while True:
             data = device.read(64)
             if data:
-                # Parse bytes to hex string, assuming relevant data starts from byte 0
-                card_number = ''.join(format(x, '02x') for x in data[:3]).lower()
-                
-                if card_number != '000000':  # Often RFID readers pad zeroes when no card is present
+                card_number = ''.join(format(x, '02x') for x in data[:4]).lower()
+
+                if card_number != '00000000' and card_number != last_card_number:  # Check for non-zero and change of card
                     current_time = time.time()
 
-                    if card_number != last_card_number:
-                        if (current_time - last_detection_time) > DEBOUNCE_TIME:
-                            user_name = get_user_from_card(card_number)
-                            print(f"{user_name} detected: Card Number {card_number}")
-                            play_confirmation_sound(sound)
-                            last_detection_time = current_time
-                            last_card_number = card_number
+                    if (current_time - last_detection_time) > DEBOUNCE_TIME:
+                        if card_number == AUTHORIZED_CARD:
+                            print(f"Authorized User detected: Card Number {card_number}")
+                            play_sound(sounds, 'confirm')
                         else:
-                            print(f"Card detected but still in debounce period: {card_number}")
+                            print(f"Unauthorized Access: Card Number {card_number}")
+                            play_sound(sounds, 'reject')
+
+                        last_detection_time = current_time
+                        last_card_number = card_number
                     else:
-                        print(f"Same card detected, ignoring: {card_number}")
-            time.sleep(0.1)
+                        print(f"Card detected but still in debounce period: {card_number}")
+
+            time.sleep(0.1)  # Delay to prevent too frequent polling
+
     except KeyboardInterrupt:
         print("Interrupted by user, closing device.")
     finally:
