@@ -55,7 +55,7 @@ def read_card():
 @app.route('/')
 def home():
     if last_card_number == AUTHORIZED_CARD:
-        return redirect("https://www.pcis.com.tr/tr/", code=302)
+        return redirect("https://www.xxxx12354.com.tr/tr/", code=302)
     else:
         return "Unauthorized Access"
 
