@@ -38,7 +38,7 @@ This project is a simple RFID card reader application that uses a USB HID device
 - Flask: Web framework for serving the app.
 - pygame: Plays audio feedback for card reads.
 - hidapi: Handles communication with the RFID USB device.
-- **Install them via:**
-```bash
+2. **Install them via:**
+  ```bash
   pip install Flask pygame hidapi`
 
